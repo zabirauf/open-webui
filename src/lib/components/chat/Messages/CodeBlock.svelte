@@ -19,10 +19,11 @@
 	};
 
 	let running = false;
+	let runResponse: {output: string, error: string} | null = null;
 
 	const runCodeClicked = async () => {
 		running = true;
-		await runCode(localStorage.token, code, "python");
+		runResponse = await runCode(localStorage.token, code, "python");
 		running = false;
 	}
 
@@ -45,5 +46,19 @@
 		<pre class=" rounded-b-lg hljs p-4 px-5 overflow-x-auto rounded-t-none"><code
 				class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
 			></pre>
+	</div>
+{/if}
+{#if runResponse}
+	<div class="mt-4">
+		{#if runResponse.output}
+			<pre class="rounded-lg hljs p-4 px-5 overflow-x-auto rounded-t-none"><code
+					class="language-{lang} rounded-t-none whitespace-pre">{@html runResponse.output}</code
+				></pre>
+		{/if}
+		{#if runResponse.error}
+			<pre class="rounded-lg hljs p-4 px-5 overflow-x-auto rounded-t-none bg-red-200 text-red-800"><code
+					class="language-{lang} rounded-t-none whitespace-pre">Error: {@html runResponse.error}</code
+				></pre>
+		{/if}
 	</div>
 {/if}
