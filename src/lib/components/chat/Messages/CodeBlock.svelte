@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { copyToClipboard } from '$lib/utils';
+	import { runCode } from '$lib/apis/code';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -17,15 +18,25 @@
 		}, 1000);
 	};
 
+	let running = false;
+
+	const runCodeClicked = async () => {
+		running = true;
+		await runCode(localStorage.token, code, "python");
+		running = false;
+	}
+
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
 </script>
 
 {#if code}
 	<div class="mb-4">
 		<div
-			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
+			class="flex justify-end bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
 		>
 			<div class="p-1">{@html lang}</div>
+			<button class="bg-none border-none p-1" on:click={runCodeClicked}
+				>{running? 'Running' : 'Run Code'}</button>
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
 				>{copied ? 'Copied' : 'Copy Code'}</button
 			>

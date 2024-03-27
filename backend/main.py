@@ -23,6 +23,7 @@ from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.web.main import app as webui_app
+from apps.code.main import app as code_app
 
 from pydantic import BaseModel
 from typing import List
@@ -159,6 +160,7 @@ app.mount("/openai/api", openai_app)
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
+app.mount("/code/api/v1", code_app)
 
 
 @app.get("/api/config")
