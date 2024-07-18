@@ -204,9 +204,7 @@ __builtins__.input = input`);
 
 	let sandpackIframe;
 	let sandpackClient;
-	let runningSandpack = false;
 	const executeHTML = async (code) => {
-		runningSandpack = true;
 
 		// Initialize Sandpack client
 		const content = {
@@ -221,14 +219,23 @@ __builtins__.input = input`);
 			},
 			environment: "vanilla"
 		};
+		if (sandpackClient) {
+			sandpackClient.updateSandbox(content);
+		} else {
+			sandpackClient = await loadSandpackClient(
+				sandpackIframe,
+				content,
+				{
+					showOpenInCodeSandbox: false 
+				}
+			);
+		}
+	};
 
-		sandpackClient = await loadSandpackClient(
-			sandpackIframe,
-			content,
-			{
-				showOpenInCodeSandbox: false
-			}
-		);
+	$: if (lang.toLowerCase() == "php" || lang.toLowerCase() == "html") {
+				if (!!sandpackIframe) {
+			executeHTML(code);
+		}
 	}
 
 	let debounceTimeout;
@@ -265,14 +272,6 @@ __builtins__.input = input`);
 					>
 				{/if}
 			{/if}
-			{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
-				<button
-					class="copy-code-button bg-none border-none p-1"
-					on:click={() => {
-						executeHTML(code);
-					}}>Run</button
-				>
-			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
 				>{copied ? 'Copied' : 'Copy Code'}</button
 			>
@@ -306,10 +305,18 @@ __builtins__.input = input`);
 			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 			<div class="text-sm">{stdout || stderr || result}</div>
 		</div>
-	{:else if runningSandpack}
+	{/if}
+	{#if lang.toLowerCase() == "php" || lang.toLowerCase() == "html"}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class=" text-gray-500 text-xs mb-1">Sandpack</div>
-			<iframe bind:this={sandpackIframe} title="Sandpack Preview" class="w-full h-64 mt-4 bg-white"></iframe>
+			<div class="text-gray-500 text-xs mb-1 flex justify-between items-center">
+				<span>HTML</span>
+				<button
+					class="copy-code-button bg-none border-none p-1"
+					on:click={() => {
+						executeHTML(code);
+					}}>Refresh</button>
+			</div>
+			<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white"></iframe>
 		</div>
 	{/if}
 </div>
