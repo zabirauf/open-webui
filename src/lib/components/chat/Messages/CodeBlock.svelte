@@ -1,11 +1,10 @@
 <script lang="ts">
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
-	import { onMount, tick } from 'svelte';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { loadSandpackClient } from '@codesandbox/sandpack-client';
 
 	export let id = '';
 
@@ -203,6 +202,35 @@ __builtins__.input = input`);
 		};
 	};
 
+	let sandpackIframe;
+	let sandpackClient;
+	let runningSandpack = false;
+	const executeHTML = async (code) => {
+		runningSandpack = true;
+
+		// Initialize Sandpack client
+		const content = {
+			files: {
+				"/package.json": { 
+					code: JSON.stringify({
+						main: "index.html",
+						dependencies: {},
+					})
+				},
+				"/index.html": { code: code }
+			},
+			environment: "vanilla"
+		};
+
+		sandpackClient = await loadSandpackClient(
+			sandpackIframe,
+			content,
+			{
+				showOpenInCodeSandbox: false
+			}
+		);
+	}
+
 	let debounceTimeout;
 	$: if (code) {
 		// Function to perform the code highlighting
@@ -237,6 +265,14 @@ __builtins__.input = input`);
 					>
 				{/if}
 			{/if}
+			{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
+				<button
+					class="copy-code-button bg-none border-none p-1"
+					on:click={() => {
+						executeHTML(code);
+					}}>Run</button
+				>
+			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
 				>{copied ? 'Copied' : 'Copy Code'}</button
 			>
@@ -252,7 +288,8 @@ __builtins__.input = input`);
 			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 			class="language-{lang} rounded-t-none whitespace-pre"
 			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
-		></pre>
+		>
+	</pre>
 
 	<div
 		id="plt-canvas-{id}"
@@ -268,6 +305,11 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 			<div class="text-sm">{stdout || stderr || result}</div>
+		</div>
+	{:else if runningSandpack}
+		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+			<div class=" text-gray-500 text-xs mb-1">Sandpack</div>
+			<iframe bind:this={sandpackIframe} title="Sandpack Preview" class="w-full h-64 mt-4 bg-white"></iframe>
 		</div>
 	{/if}
 </div>
