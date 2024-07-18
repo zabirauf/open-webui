@@ -205,35 +205,31 @@ __builtins__.input = input`);
 	let sandpackIframe;
 	let sandpackClient;
 	const executeHTML = async (code) => {
-
 		// Initialize Sandpack client
 		const content = {
 			files: {
-				"/package.json": { 
+				'/package.json': {
 					code: JSON.stringify({
-						main: "index.html",
-						dependencies: {},
+						main: 'index.html',
+						devDependencies: {}
 					})
 				},
-				"/index.html": { code: code }
+				'/index.html': { code }
 			},
-			environment: "vanilla"
+			environment: 'vanilla',
+			template: 'static'
 		};
 		if (sandpackClient) {
 			sandpackClient.updateSandbox(content);
 		} else {
-			sandpackClient = await loadSandpackClient(
-				sandpackIframe,
-				content,
-				{
-					showOpenInCodeSandbox: false 
-				}
-			);
+			sandpackClient = await loadSandpackClient(sandpackIframe, content, {
+				showOpenInCodeSandbox: true
+			});
 		}
 	};
 
-	$: if (lang.toLowerCase() == "php" || lang.toLowerCase() == "html") {
-				if (!!sandpackIframe) {
+	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
+		if (!!sandpackIframe) {
 			executeHTML(code);
 		}
 	}
@@ -306,7 +302,7 @@ __builtins__.input = input`);
 			<div class="text-sm">{stdout || stderr || result}</div>
 		</div>
 	{/if}
-	{#if lang.toLowerCase() == "php" || lang.toLowerCase() == "html"}
+	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-xs mb-1 flex justify-between items-center">
 				<span>HTML</span>
@@ -314,9 +310,10 @@ __builtins__.input = input`);
 					class="copy-code-button bg-none border-none p-1"
 					on:click={() => {
 						executeHTML(code);
-					}}>Refresh</button>
+					}}>Refresh</button
+				>
 			</div>
-			<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white"></iframe>
+			<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
 		</div>
 	{/if}
 </div>
