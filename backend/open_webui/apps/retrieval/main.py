@@ -103,10 +103,10 @@ from open_webui.utils.misc import (
 from open_webui.utils.utils import get_admin_user, get_verified_user
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    YoutubeLoader,
-)
 from langchain_core.documents import Document
+
+from yt_dlp import YoutubeDL
+from webvtt import WebVTT
 
 
 log = logging.getLogger(__name__)
@@ -916,15 +916,41 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = YoutubeLoader.from_youtube_url(
-            form_data.url,
-            add_video_info=True,
-            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
-        )
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
+        language = app.state.config.YOUTUBE_LOADER_LANGUAGE
+
+        # Set up yt-dlp options to fetch the transcript
+        ydl_opts = {
+            'writeautomaticsub': True,
+            'subtitlesformat': 'vtt',
+            'skip_download': True,
+            'outtmpl': 'temp_caption',
+            'subtitleslangs': [language],
+        }
+
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(form_data.url, download=False)
+
+            if 'subtitles' in info and language in info['subtitles']:
+                subtitle_url = info['subtitles'][language][0]['url']
+            elif 'automatic_captions' in info and language in info['automatic_captions']:
+                subtitle_url = info['automatic_captions'][language][0]['url']
+            else:
+                print(f"No {language} subtitles or captions found.")
+                return
+
+            # Download the subtitle file
+            ydl.download([form_data.url])
+
+        # Find the downloaded .vtt file
+        vtt_file = next(f for f in os.listdir() if f.startswith('temp_caption') and f.endswith('.vtt'))
+
+        # Parse the .vtt file and extract transcript
+        vtt = WebVTT().read(vtt_file)
+        content = ' '.join([caption.text for caption in vtt.captions])
+        docs = [{"page_content": content}]
+
         log.debug(f"text_content: {content}")
+
         save_docs_to_vector_db(docs, collection_name, overwrite=True)
 
         return {
@@ -946,6 +972,11 @@ def process_youtube_video(form_data: ProcessUrlForm, user=Depends(get_verified_u
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+    finally:
+        # Clean up: remove the temporary .vtt file
+        for file in os.listdir():
+            if file.startswith('temp_caption') and file.endswith('.vtt'):
+                os.remove(file)
 
 
 @app.post("/process/web")
